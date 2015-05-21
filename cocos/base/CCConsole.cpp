@@ -381,12 +381,12 @@ bool Console::listenOnTCP(int port)
             if (res->ai_family == AF_INET)
             {
                 struct sockaddr_in *sin = (struct sockaddr_in*) res->ai_addr;
-                inet_pton(res->ai_family, _bindAddress.c_str(), (void*)&sin->sin_addr);
+                //inet_pton(res->ai_family, _bindAddress.c_str(), (void*)&sin->sin_addr);
             }
             else if (res->ai_family == AF_INET6)
             {
                 struct sockaddr_in6 *sin = (struct sockaddr_in6*) res->ai_addr;
-                inet_pton(res->ai_family, _bindAddress.c_str(), (void*)&sin->sin6_addr);
+                //inet_pton(res->ai_family, _bindAddress.c_str(), (void*)&sin->sin6_addr);
             }
         }
 
@@ -408,7 +408,7 @@ bool Console::listenOnTCP(int port)
     }
 
     listen(listenfd, 50);
-
+    /*
     if (res->ai_family == AF_INET) {
         char buf[INET_ADDRSTRLEN] = "";
         struct sockaddr_in *sin = (struct sockaddr_in*) res->ai_addr;
@@ -424,8 +424,9 @@ bool Console::listenOnTCP(int port)
         else
             perror("inet_ntop");
     }
-
-
+    */
+    perror("inet_ntop");
+	
     freeaddrinfo(ressave);
     return listenOnFileDescriptor(listenfd);
 }
