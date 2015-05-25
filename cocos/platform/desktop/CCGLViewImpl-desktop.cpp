@@ -317,6 +317,17 @@ GLViewImpl* GLViewImpl::createWithRect(const std::string& viewName, Rect rect, f
     return nullptr;
 }
 
+GLViewImpl* GLViewImpl::createWithWindowedFullScreen(const std::string& viewName, Rect rect, float frameZoomFactor)
+{
+	auto ret = new (std::nothrow) GLViewImpl;
+	if(ret && ret->initWithWindowedFullScreen(viewName, rect, frameZoomFactor)) {
+		ret->autorelease();
+		return ret;
+	}
+
+	return nullptr;
+}
+
 GLViewImpl* GLViewImpl::createWithFullScreen(const std::string& viewName)
 {
     auto ret = new (std::nothrow) GLViewImpl();
@@ -359,6 +370,7 @@ bool GLViewImpl::initWithRect(const std::string& viewName, Rect rect, float fram
                                    _monitor,
                                    nullptr);
     glfwMakeContextCurrent(_mainWindow);
+	glfwSetWindowPos(_mainWindow, rect.origin.x, rect.origin.y);
 
     glfwSetMouseButtonCallback(_mainWindow, GLFWEventHandler::onGLFWMouseCallBack);
     glfwSetCursorPosCallback(_mainWindow, GLFWEventHandler::onGLFWMouseMoveCallBack);
@@ -391,6 +403,12 @@ bool GLViewImpl::initWithRect(const std::string& viewName, Rect rect, float fram
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
     return true;
+}
+
+bool GLViewImpl::initWithWindowedFullScreen(const std::string& viewName, Rect rect, float frameZoomFactor)
+{
+	glfwWindowHint( GLFW_DECORATED,GL_FALSE);
+	return initWithRect(viewName, rect, 1.0f);
 }
 
 bool GLViewImpl::initWithFullScreen(const std::string& viewName)
@@ -852,6 +870,28 @@ bool GLViewImpl::initGlew()
 
 #endif // (CC_TARGET_PLATFORM != CC_PLATFORM_MAC)
 
+#if defined(_VSYNCOFF)
+	log("VSYNC : OFF");
+	glfwSwapInterval(0);
+#else
+	if(glfwExtensionSupported("WGL_EXT_swap_control_tear"))
+	{
+		log("Adaptive VSYNC : ON");
+		glfwSwapInterval(-1);	
+	}
+	else
+	{
+		if(glfwExtensionSupported("WGL_EXT_swap_control"))
+		{
+			log("VSYNC : ON");
+			glfwSwapInterval(1);	
+		}
+		else
+		{
+			log("WGL_EXT_swap_control doesn't support");
+		}
+	}
+#endif
     return true;
 }
 

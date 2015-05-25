@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 #include "platform/CCPlatformConfig.h"
 #if CC_TARGET_PLATFORM == CC_PLATFORM_WIN32
-
+#pragma commet(lib, "Winmm.lib");
 #include "platform/CCApplication.h"
 #include "base/CCDirector.h"
 #include <algorithm>
@@ -45,6 +45,14 @@ Application * Application::sm_pSharedApplication = 0;
 Application::Application()
 : _instance(nullptr)
 , _accelTable(nullptr)
+, _curThreadRunCPUCore(-1)
+, _setThreadRunCPUCore(-1)
+, _curThreadPriority(-1)
+, _setThreadPriority(-1)
+, _cntSetThreadRunCPUCoreError(0)
+, _sleepMs(1)
+, _curFullSpeedRender(false)
+, _setFullSpeedRender(false)
 {
     _instance    = GetModuleHandle(nullptr);
     _animationInterval.QuadPart = 0;
@@ -84,18 +92,79 @@ int Application::run()
 
     while(!glview->windowShouldClose())
     {
-        QueryPerformanceCounter(&nNow);
-        if (nNow.QuadPart - nLast.QuadPart > _animationInterval.QuadPart)
-        {
-            nLast.QuadPart = nNow.QuadPart - (nNow.QuadPart % _animationInterval.QuadPart);
-            
-            director->mainLoop();
-            glview->pollEvents();
-        }
-        else
-        {
-            Sleep(1);
-        }
+		if(_curThreadRunCPUCore != _setThreadRunCPUCore)
+		{
+			if(_setThreadRunCPUCore == SetThreadAffinityMask(GetCurrentThread(), _setThreadRunCPUCore))
+			{
+				_curThreadRunCPUCore = _setThreadRunCPUCore;
+				_cntSetThreadRunCPUCoreError = 0;
+			}
+			else
+			{
+				++_cntSetThreadRunCPUCoreError;
+				if(_cntSetThreadRunCPUCoreError >= 3)
+				{
+#if defined(_DEBUG)
+					char strComplain[256] = {0};
+					sprintf(strComplain,
+						"set thread run cpu core to %d error",
+						_setThreadRunCPUCore);
+					MessageBox(strComplain, "set thread error");
+					break;
+#else
+					_setThreadRunCPUCore = _curThreadRunCPUCore;
+#endif
+				}
+			}
+		}
+		if(_curThreadPriority != _setThreadPriority)
+		{
+			if(SetThreadPriority(GetCurrentThread(),_setThreadPriority))
+			{
+				_curThreadPriority = _setThreadPriority;		
+			}
+			else
+			{
+				char strComplain[256] = {0};
+				sprintf(strComplain,
+					"set thread priority to %d error",
+					_setThreadPriority);
+				MessageBox(strComplain, "set thread error");
+				break;
+			}
+		}
+		if(_curFullSpeedRender != _setFullSpeedRender)
+		{
+			_curFullSpeedRender = _setFullSpeedRender;
+			if(!_curFullSpeedRender)
+			{
+				QueryPerformanceCounter(&nLast);
+			}
+		}
+
+		timeBeginPeriod(1);
+		if(_curFullSpeedRender)
+		{
+			director->mainLoop();
+			glview->pollEvents();
+			Sleep(_sleepMs);
+		}
+		else
+		{
+			QueryPerformanceCounter(&nNow);
+			int deltaQuadPart = nNow.QuadPart - nLast.QuadPart;
+			if (deltaQuadPart > _animationInterval.QuadPart)
+			{
+				nLast.QuadPart = nNow.QuadPart - (nNow.QuadPart % _animationInterval.QuadPart);
+				director->mainLoop();
+				glview->pollEvents();
+			}
+			else
+			{
+				Sleep(_sleepMs);
+			}
+		}
+		timeEndPeriod(1);
     }
 
     // Director should still do a cleanup if the window was closed manually.

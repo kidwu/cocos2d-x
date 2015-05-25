@@ -101,6 +101,11 @@ public:
         return _startupScriptFilename;
     }
 
+	void setThreadRunCpuCore(int runCpuCore) { _setThreadRunCPUCore = runCpuCore; }
+	void setThreadPriority(int priority) { _setThreadPriority = priority; }
+	void setSleepMs(int ms) { _sleepMs = ms; }
+	void setFullSpeedRender(bool fullSpeedRender)  {_setFullSpeedRender = fullSpeedRender; }
+
 protected:
     HINSTANCE           _instance;
     HACCEL              _accelTable;
@@ -109,6 +114,15 @@ protected:
     std::string         _startupScriptFilename;
 
     static Application * sm_pSharedApplication;
+
+	int _curThreadRunCPUCore;
+	int _setThreadRunCPUCore;
+	int _cntSetThreadRunCPUCoreError;
+	int _curThreadPriority;
+	int _setThreadPriority;
+	int _sleepMs;
+	bool _curFullSpeedRender;
+	bool _setFullSpeedRender;
 };
 
 NS_CC_END
